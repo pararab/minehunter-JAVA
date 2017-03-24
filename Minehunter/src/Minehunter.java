@@ -4,6 +4,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.Random;
 
+
 class TextImg {
 	File path = new File("");
 	
@@ -23,6 +24,7 @@ class TextImg {
 class ButtonImg {
 	File path = new File("");
 	
+	ImageIcon bfirst = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_first.gif");
 	ImageIcon bnumImg[] = {new ImageIcon(path.getAbsolutePath() + "/rss/bimg_0.gif"),
 			 new ImageIcon(path.getAbsolutePath() + "/rss/bimg_1.gif"), 
 			 new ImageIcon(path.getAbsolutePath() + "/rss/bimg_2.gif"),
@@ -32,11 +34,54 @@ class ButtonImg {
 			 new ImageIcon(path.getAbsolutePath() + "/rss/bimg_6.gif"),
 			 new ImageIcon(path.getAbsolutePath() + "/rss/bimg_7.gif"),
 			 new ImageIcon(path.getAbsolutePath() + "/rss/bimg_8.gif")};
-	ImageIcon BmineImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_mine.gif");
-	ImageIcon BendImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_end.gif");
-	ImageIcon BbingoImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_bingo.gif");
-	ImageIcon BqImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_q.gif");
+	ImageIcon bmineImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_mine.gif");
+	ImageIcon bendImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_end.gif");
+	ImageIcon bingoImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_bingo.gif");
+	ImageIcon bqImg = new ImageIcon(path.getAbsolutePath() + "/rss/bimg_q.gif");
+	ImageIcon clear = new ImageIcon(path.getAbsolutePath() + "/rss/clear.gif");
+	ImageIcon fail = new ImageIcon(path.getAbsolutePath() + "/rss/fail.gif");
+}
+
+class EndGameAct extends Thread implements Runnable{
+	private Main win;
+	boolean check;
 	
+	public EndGameAct(Main win, boolean check){
+		this.win = win;
+		this.check = check;
+	}
+	public void run(){
+		win.revalidate();
+		win.repaint();
+		try{Thread.sleep(3000);}
+		catch(InterruptedException err){} 
+		
+		win.getContentPane().removeAll();
+		JButton endB;
+		if(check == true) endB = new JButton(win.bimg.clear);
+		else endB = new JButton(win.bimg.fail);
+		endB.setContentAreaFilled(false); //버튼 내부공간 지우기
+		endB.setBorderPainted(false); //버튼 테두리 지우기
+		endB.setBounds(100, 100, 400, 200);
+		endB.addActionListener(new ResetListener(win));
+		win.ct.add(endB);
+		win.revalidate();
+		win.repaint();
+	}
+}
+class ResetListener implements ActionListener{
+	private Main win;
+	
+	public ResetListener(Main win){
+		this.win = win;
+	}
+	public void actionPerformed(ActionEvent e) {
+		win.getContentPane().removeAll();
+		win.menu = new Menu(win);
+		win.getContentPane().add(win.menu);
+		win.revalidate();
+		win.repaint();
+	}
 }
 
 class Menu extends JPanel  {
@@ -70,13 +115,14 @@ class Menu extends JPanel  {
 	}
 	class StartBListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			win.changeJP(/*new Game(win)*/ new CountDown(win));
+			win.startGame();
 		}
 	}
 }
 class MyButton {
-	JButton jb = new JButton();
-	JLabel jl = new JLabel();
+	public static final int SIZE = 25;
+	JButton jb;
+	JLabel jl;
 	int x;
 	int y;
 	int mineN = 0;
@@ -92,94 +138,142 @@ class MyButton {
 class ListenerBN implements MouseListener {
 	Game gm;
 	MyButton mb;
-	ButtonImg bimg = new ButtonImg();
+	ButtonImg bimg;
 	
 	public ListenerBN (Game gm, MyButton mb){
 		this.gm = gm;
 		this.mb = mb;
+		this.bimg = gm.bimg;
 	}
-	public void mouseClicked(MouseEvent e){
-		 gm.remove(mb.jb);
-		 if(e.getButton() == e.BUTTON3){    // 오른쪽 마우스 클릭
-			  if(mb.form == 0){
-				  mb.jb = new JButton(bimg.BbingoImg);
-				  mb.form++;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  else if(mb.form == 1){
-				  mb.jb = new JButton(bimg.BqImg);
-				  mb.form++;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  else {
-				  mb.jb = new JButton();
-				  mb.form = 0;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  gm.add(mb.jb);
+	public void mousePressed(MouseEvent e){
+		 if(e.getButton() == MouseEvent.BUTTON3){ // 오른쪽 마우스 클릭
+			 	if(gm.win.preventionActBug == true){
+			 		gm.win.preventionActBug = false;
+			 		gm.remove(mb.jb);
+			 		if(mb.form == 0){
+			 			mb.jb = new JButton(bimg.bingoImg);
+			 			mb.form++;
+			 			mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			 			mb.jb.addMouseListener(new ListenerBN(gm, mb));
+			 		}
+			 		else if(mb.form == 1){
+			 			mb.jb = new JButton(bimg.bqImg);
+			 			mb.form++;
+			 			mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			 			mb.jb.addMouseListener(new ListenerBN(gm, mb));
+			 		}
+			 		else {
+			 			mb.jb = new JButton();
+			 			mb.form = 0;
+			 			mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			 			mb.jb.addMouseListener(new ListenerBN(gm, mb));
+			 		}
+			 		gm.add(mb.jb);
+			 	}
 		  }
-		  else{       // 왼쪽 마우스 클릭	  
+		  else{       // 왼쪽 마우스 클릭	 
+			  gm.remove(mb.jb);
 			  mb.jl = new JLabel(bimg.bnumImg[mb.mineN]);
-			  mb.jl.setBounds(mb.x*25, mb.y*25, 25, 25);
+			  mb.jl.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
 				
 			  gm.add(mb.jl);
 			  mb.checkpush = true;
+			  
+			  if(gm.minecheckN == gm.ttlmN){
+				  boolean check = true;
+				  for(int i=0; i<Game.MAX_X; i++){
+					  for(int j=0; j<Game.MAX_Y; j++){
+						  if(gm.mb[i][j].mine == false 
+							&& gm.mb[i][j].checkpush == false) {
+							  check = false; break;
+						  }
+					  }
+				  }
+				  if(check == true){
+					  gm.win.cd.ts.terminate();
+					  gm.win.ega = new EndGameAct(gm.win, true);
+					  gm.win.ega.start();
+				  }
+				  
+				 }
 		  }
 	}
 	public void mouseEntered(MouseEvent e) {}
 	public void mouseExited(MouseEvent e) {}
 	public void mouseReleased(MouseEvent e) {}
-	public void mousePressed(MouseEvent e) {}
+	public void mouseClicked(MouseEvent e) {}
 }
 class ListenerB0 implements MouseListener {
 	Game gm;
 	MyButton mb;
-	ButtonImg bimg = new ButtonImg();
+	ButtonImg bimg;
 	
 	public ListenerB0 (Game gm, MyButton mb){
 		this.gm = gm;
 		this.mb = mb;
+		this.bimg = gm.bimg;
 	}
-	public void mouseClicked(MouseEvent e){
-		 gm.remove(mb.jb);
-		 if(e.getButton() == e.BUTTON3){    // 오른쪽 마우스 클릭
-			  if(mb.form == 0){
-				  mb.jb = new JButton(bimg.BbingoImg);
-				  mb.form++;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  else if(mb.form == 1){
-				  mb.jb = new JButton(bimg.BqImg);
-				  mb.form++;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  else {
-				  mb.jb = new JButton();
-				  mb.form = 0;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  gm.add(mb.jb);
+	public void mousePressed(MouseEvent e){
+		 if((e.getButton() == MouseEvent.BUTTON3)){    // 오른쪽 마우스 클릭
+			 	if(gm.win.preventionActBug == true) {
+			 		gm.win.preventionActBug = false;
+				 	gm.remove(mb.jb);
+			  		if(mb.form == 0){
+			  			mb.jb = new JButton(bimg.bingoImg);
+			  			mb.form++;
+			  			mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			  			mb.jb.addMouseListener(new ListenerB0(gm, mb));
+			  		}
+			  		else if(mb.form == 1){
+			  			mb.jb = new JButton(bimg.bqImg);
+			  			mb.form++;
+			  			mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			  			mb.jb.addMouseListener(new ListenerB0(gm, mb));
+			  		}
+			  		else {
+			  			mb.jb = new JButton();
+			  			mb.form = 0;
+			  			mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			  			mb.jb.addMouseListener(new ListenerB0(gm, mb));
+			  		}
+			  		gm.add(mb.jb);
+			 	}
 		  }
 		  else{       // 왼쪽 마우스 클릭	  
-			  ChangeImg ci = new ChangeImg(mb);
+			  if(gm.minecheckN == gm.ttlmN){
+				  boolean check = true;
+				  mb.checkpush = true;
+				  for(int i=0; i<Game.MAX_X; i++){
+					  for(int j=0; j<Game.MAX_Y; j++){
+						  if(gm.mb[i][j].mine == false 
+							&& gm.mb[i][j].checkpush == false) {
+							  check = false; break;
+						  }
+					  }
+				  }
+				  if(check == true){
+					  gm.win.cd.ts.terminate();
+					  gm.win.ega = new EndGameAct(gm.win, true);
+					  gm.win.ega.start();
+				  }
+			  }
+			  else{
+			  gm.remove(mb.jb);
+			  mb.checkpush = false;
+			  ActionofLB0 ci = new ActionofLB0(mb);
 			  ci.run();
+			  }
 		  }
 	}
 	public void mouseEntered(MouseEvent e) {}
 	public void mouseExited(MouseEvent e) {}
 	public void mouseReleased(MouseEvent e) {}
-	public void mousePressed(MouseEvent e) {}
+	public void mouseClicked(MouseEvent e) {}
 	
-	class ChangeImg extends Thread implements Runnable{
+	class ActionofLB0 extends Thread implements Runnable{
 		MyButton mb;
-		ChangeImg ci;
-		public ChangeImg(MyButton mb){
+		ActionofLB0 ci;
+		public ActionofLB0(MyButton mb){
 			this.mb = mb;
 		}
 			
@@ -187,73 +281,73 @@ class ListenerB0 implements MouseListener {
 			if(mb.checkpush == false){
 				gm.remove(mb.jb);
 				mb.jl = new JLabel(bimg.bnumImg[mb.mineN]);
-				mb.jl.setBounds(mb.x*25, mb.y*25, 25, 25);
+				mb.jl.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
 				mb.checkpush = true;
 				gm.add(mb.jl);
 
 				if(mb.mineN == 0){
 					if(mb.x == 0){
 						if(mb.y == 0){
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y+1]); ci.run();
 						}
 						else if(mb.y == 9){
-							ci = new ChangeImg(gm.mb[mb.x][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y]); ci.run();
 						}
 						else{
-							ci = new ChangeImg(gm.mb[mb.x][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y+1]); ci.run();
 						}
 					}
 					else if(mb.x == 19){
 						if(mb.y == 0){
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y+1]); ci.run();
 						}
 						else if(mb.y == 9){
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y]); ci.run();
 						}
 						else{
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y+1]); ci.run();
 						}
 					}
 					else{
 						if(mb.y == 0){
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y+1]); ci.run();
 						}
 						else if(mb.y == 9){
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y]); ci.run();
 						}
 						else{
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y-1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x-1][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x][mb.y+1]); ci.run();
-							ci = new ChangeImg(gm.mb[mb.x+1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y-1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x-1][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x][mb.y+1]); ci.run();
+							ci = new ActionofLB0(gm.mb[mb.x+1][mb.y+1]); ci.run();
 						}
 					}
 				}
@@ -264,86 +358,117 @@ class ListenerB0 implements MouseListener {
 class ListenerMine implements MouseListener {
 	Game gm;
 	MyButton mb;
-	ButtonImg bimg = new ButtonImg();
+	ButtonImg bimg;
 	
 	public ListenerMine (Game gm, MyButton mb){
 		this.gm = gm;
 		this.mb = mb;
+		this.bimg = gm.bimg;
 	}
 	
-	public void mouseClicked(MouseEvent e) {
-		gm.remove(mb.jb); 
-		if(e.getButton() == e.BUTTON3){    // 오른쪽 마우스 클릭
-			  if(mb.form == 0){
-				  mb.jb = new JButton(bimg.BbingoImg);
-				  mb.form++;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-				  gm.minecheckN++;
-			  }
-			  else if(mb.form == 1){
-				  mb.jb = new JButton(bimg.BqImg);
-				  mb.form++;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-				  gm.minecheckN--;
-			  }
-			  else {
-				  mb.jb = new JButton();
-				  mb.form = 0;
-				  mb.jb.setBounds(mb.x*25, mb.y*25, 25, 25);
-				  mb.jb.addMouseListener(this);
-			  }
-			  gm.add(mb.jb);
+	public void mousePressed(MouseEvent e) { 
+		if(e.getButton() == MouseEvent.BUTTON3){    // 오른쪽 마우스 클릭
+			if(gm.win.preventionActBug == true){
+				gm.remove(mb.jb);
+				gm.win.preventionActBug = false;
+			  	if(mb.form == 0){
+			  		mb.jb = new JButton(bimg.bingoImg);
+			  		mb.form++;
+			  		mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			  		mb.jb.addMouseListener(new ListenerMine(gm, mb));
+			  		gm.minecheckN++;
+			  		
+			  		if(gm.minecheckN == gm.ttlmN){
+			  			boolean check = true;
+			  			for(int i=0; i<Game.MAX_X; i++){
+			  				for(int j=0; j<Game.MAX_Y; j++){
+			  					if(gm.mb[i][j].mine == false 
+			  							&& gm.mb[i][j].checkpush == false) {
+			  						check = false; break;
+			  					}
+			  				}
+			  			}
+			  			if(check == true){
+							  gm.win.cd.ts.terminate();
+							  gm.win.ega = new EndGameAct(gm.win, true);
+							  gm.win.ega.start();
+						  }
+			  		}
+			  	}
+			  	else if(mb.form == 1){
+			  		mb.jb = new JButton(bimg.bqImg);
+			  		mb.form++;
+			  		mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			  		mb.jb.addMouseListener(new ListenerMine(gm, mb));
+			  		gm.minecheckN--;
+			  	}
+			  	else {
+			  		mb.jb = new JButton();
+			  		mb.form = 0;
+			  		mb.jb.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
+			  		mb.jb.addMouseListener(new ListenerMine(gm, mb));
+			  	}
+			  	gm.add(mb.jb);
+			}
 		 }
 		 else{
-			 for(int i=0; i<gm.ttlmN; i++){
+			 	gm.remove(mb.jb);	
+			 	for(int i=0; i<gm.ttlmN; i++){
 					gm.remove(gm.mb[gm.mx[i]][gm.my[i]].jb);
-					gm.mb[gm.mx[i]][gm.my[i]].jl = new JLabel(bimg.BmineImg);
+					gm.mb[gm.mx[i]][gm.my[i]].jl = new JLabel(bimg.bmineImg);
 					gm.mb[gm.mx[i]][gm.my[i]].jl.setBounds(
-								gm.mb[gm.mx[i]][gm.my[i]].x*25,
-								gm.mb[gm.mx[i]][gm.my[i]].y*25, 25, 25);
+								gm.mb[gm.mx[i]][gm.my[i]].x*MyButton.SIZE,
+								gm.mb[gm.mx[i]][gm.my[i]].y*MyButton.SIZE, 
+								MyButton.SIZE, MyButton.SIZE);
 					gm.add(gm.mb[gm.mx[i]][gm.my[i]].jl);
 				}
 			 	gm.remove(mb.jl);
-				mb.jl = new JLabel(bimg.BendImg);
-				mb.jl.setBounds(mb.x*25, mb.y*25, 25, 25);
+				mb.jl = new JLabel(bimg.bendImg);
+				mb.jl.setBounds(mb.x*MyButton.SIZE, mb.y*MyButton.SIZE, MyButton.SIZE, MyButton.SIZE);
 				gm.add(mb.jl);
+				
+				gm.win.cd.ts.terminate();
+				 
+				gm.win.ega = new EndGameAct(gm.win, false);
+				gm.win.ega.start();
 		 }
 	}
 
 	public void mouseEntered(MouseEvent e) {}
 	public void mouseExited(MouseEvent e) {}
 	public void mouseReleased(MouseEvent e) {}
-	public void mousePressed(MouseEvent e){}
+	public void mouseClicked(MouseEvent e){}
 }
 class Game extends JPanel {
-	private Main win;
-	private int score = 0;
+	public static final int MAX_X = 20;
+	public static final int MAX_Y = 10;
 	
+	Main win;	
 	MyButton mb[][];
+	ButtonImg bimg;
+	
 	int[] mx;
 	int[] my;
 	int minecheckN = 0;
-	int ttlmN = 10;
+	int ttlmN = 15;
 	
 	void makemine(MyButton mb[][], int mx[], int my[]){
 		Random random = new Random();
 	
-		mx[0] = random.nextInt(20);
-		my[0] = random.nextInt(10);
+		mx[0] = random.nextInt(MAX_X);
+		my[0] = random.nextInt(MAX_Y);
 		
 		for(int i=1; i<ttlmN; i++){
 			boolean pass = true;
 			do
 			{
-				mx[i] = random.nextInt(20);
-				my[i] = random.nextInt(10);
+				mx[i] = random.nextInt(MAX_X);
+				my[i] = random.nextInt(MAX_Y);
 				
+				pass = true;
 				for(int j = 0; j<i; j++){
 					if(mx[i] == mx[j] && my[i] == my[j])
 						pass = false;
-					else pass = true;
 				}
 			} while(!pass);
 		}
@@ -356,7 +481,7 @@ class Game extends JPanel {
 					mb[mx[i]][my[i]+1].mineN++;
 					mb[mx[i]+1][my[i]+1].mineN++;
 				}
-				else if(my[i] == 9){
+				else if(my[i] == MAX_Y-1){
 					mb[mx[i]+1][my[i]].mineN++;
 					mb[mx[i]][my[i]-1].mineN++;
 					mb[mx[i]+1][my[i]-1].mineN++;
@@ -369,13 +494,13 @@ class Game extends JPanel {
 					mb[mx[i]+1][my[i]+1].mineN++;
 				}
 			}
-			else if(mx[i] == 19){
+			else if(mx[i] == MAX_X-1){
 				if(my[i] == 0){
 					mb[mx[i]-1][my[i]].mineN++;
 					mb[mx[i]][my[i]+1].mineN++;
 					mb[mx[i]-1][my[i]+1].mineN++;
 				}
-				else if(my[i] == 9){
+				else if(my[i] == MAX_Y-1){
 					mb[mx[i]-1][my[i]].mineN++;
 					mb[mx[i]][my[i]-1].mineN++;
 					mb[mx[i]-1][my[i]-1].mineN++;
@@ -396,7 +521,7 @@ class Game extends JPanel {
 					mb[mx[i]][my[i]+1].mineN++;
 					mb[mx[i]+1][my[i]+1].mineN++;
 				}
-				else if(my[i] == 9){
+				else if(my[i] == MAX_Y-1){
 					mb[mx[i]-1][my[i]-1].mineN++;
 					mb[mx[i]][my[i]-1].mineN++;
 					mb[mx[i]+1][my[i]-1].mineN++;
@@ -416,8 +541,8 @@ class Game extends JPanel {
 			}
 		}
 		
-		for(int i=0; i<20; i++){
-			for(int j=0; j<10; j++){
+		for(int i=0; i<MAX_X; i++){
+			for(int j=0; j<MAX_Y; j++){
 				if(mb[i][j].mine == false){
 					if(mb[i][j].mineN == 0) mb[i][j].jb.addMouseListener(
 											new ListenerB0(this, mb[i][j]));
@@ -432,16 +557,18 @@ class Game extends JPanel {
 		setLayout(null);
 		this.win = win;
 		//setBackground(new Color(153, 255, 153)); //panel 색 조정
-		setBounds(50, 50, 500, 250); //위치, 크기 조정 이를 위해 Container와 JPanel 모두 layout을 null로 지정해줘야 한다.
+		setBounds(50, 50, MyButton.SIZE * MAX_X, MyButton.SIZE * MAX_Y); //위치, 크기 조정 이를 위해 Container와 JPanel 모두 layout을 null로 지정해줘야 한다.
 		
 		mb = new MyButton[20][10];
-		mx = new int[10];
-		my = new int[10];
+		mx = new int[ttlmN];
+		my = new int[ttlmN];
+		bimg = win.bimg;
 		
-		for (int i = 0; i< 20; i++){
-			for (int j = 0; j< 10; j++){
+		for (int i = 0; i< MAX_X; i++){
+			for (int j = 0; j< MAX_Y; j++){
 			mb[i][j] = new MyButton(i, j);
-			mb[i][j].jb.setBounds(25*i, 25*j, 25, 25);
+			mb[i][j].jb = new JButton(bimg.bfirst);
+			mb[i][j].jb.setBounds(MyButton.SIZE*i, MyButton.SIZE*j, MyButton.SIZE, MyButton.SIZE);
 			add(mb[i][j].jb);
 			}
 		}
@@ -463,7 +590,7 @@ class CountDown extends JPanel  {
 		setBounds(182, 320, 250, 100);
 		setBackground(new Color(153, 255, 153)); //panel 색 조정
 		
-		ti = new TextImg();
+		this.ti = win.ti;
 		
 		jl1 = new JLabel(ti.numImg[2]);
 		jl2 = new JLabel(ti.numImg[0]);
@@ -480,23 +607,24 @@ class CountDown extends JPanel  {
 		ts = new Tstart(this, time);
 	}
 	
-	class Tstart extends Thread implements Runnable {
+	public class Tstart extends Thread implements Runnable {
 		private CountDown cd;
 		int time;
-		//int count = 10;
+		private volatile  boolean running = true;
+		//int count = 100;
 		
 		public Tstart(CountDown cd, int time){
 			this.cd = cd;
 			this.time = time;
 		}
-		
+		public void terminate() {
+		        running = false;
+		}
 		public void run(){
-			while(!Thread.currentThread().isInterrupted() || time > 0){
+			while(running && time != 0){
 				try{Thread.sleep(1000);}
 				catch(InterruptedException e){}
 				time--;
-				//if(count == 0){
-					//count = 10; // 메인 프레임에서 선언해야됨...
 					cd.jl1 = new JLabel(ti.numImg[(time / 600)]);
 					cd.jl2 = new JLabel(ti.numImg[((time % 600) / 60)]);
 					cd.jl4 = new JLabel(ti.numImg[(((time % 600) % 60) / 10)]);
@@ -508,21 +636,32 @@ class CountDown extends JPanel  {
 					cd.add(jl3);
 					cd.add(jl4);
 					cd.add(jl5);
-			
+					
+					win.preventionActBug = true;
 					win.revalidate();
 					win.repaint();
 				//}
 				//else count--;
+			}
+			if(time <= 0){
+				win.ega = new EndGameAct(win, false);
+				win.ega.start();
 			}
 		}
 	}
 	
 }
 
-class Main extends JFrame {
-	JPanel menu, game;
+class Main extends JFrame{
 	Container ct;
+	Menu menu;
 	CountDown cd;
+	Game gm;
+	TextImg ti;
+	ButtonImg bimg;
+	EndGameAct ega;
+	
+	boolean preventionActBug = true;
 	
 	public Main() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); //프래임 종료시 프로그램 종료, 생성자 초반부에 작성해준다.
@@ -530,35 +669,26 @@ class Main extends JFrame {
 		//ct.setLayout(new FlowLayout(FlowLayout.CENTER, 500, 10));
 		ct.setLayout(null);
 		ct.setBackground(new Color(153, 255, 153));
-		Menu menu = new Menu(this);
+		
+		ti = new TextImg();
+		bimg = new ButtonImg();
+		
+		menu = new Menu(this);
 		ct.add(menu);
 		setTitle("Event Test3");
 		setSize(615, 435); //in my screen it is 600,400;
 		setVisible(true);
 	}
-	public void changeJP(CountDown jp){
-		cd = jp;
+	public void startGame(){
 		getContentPane().removeAll();
-		getContentPane().add(jp);
-		if(jp instanceof CountDown){
-			Game tmp = new Game(this);
-			getContentPane().add(tmp);
-			revalidate();
-			repaint();
-		}
-		else{
+		cd = new CountDown(this);
+		gm = new Game(this);
+		getContentPane().add(cd);
+		getContentPane().add(gm);
 		revalidate();
 		repaint();
-		}
-		jp.ts.start();
+		cd.ts.start();
 	}
-	public void changeJP(JPanel jp1, JPanel jp2){
-		getContentPane().removeAll();
-		getContentPane().add(jp1);
-		getContentPane().add(jp2);
-		revalidate();
-		repaint();
-}
 }
 
 public class Minehunter {
